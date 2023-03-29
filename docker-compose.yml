@@ -1,0 +1,97 @@
+version: "3.9"
+services:
+  product-service:
+    container_name: productservice
+    build:
+      context: ./productService
+      dockerfile: Dockerfile
+    links:
+      - database
+    depends_on:
+      - database
+      - rabbitmq-container
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/testdb
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=sameer
+
+    ports:
+      - "8087:8087"
+    restart: always
+    networks:
+      - internal
+
+  basket-service:
+    container_name: basketservice
+    build:
+      context: ./basketService
+      dockerfile: Dockerfile
+    links:
+      - database
+    depends_on:
+      - database
+      - rabbitmq-container
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/testdb
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=sameer
+
+    ports:
+      - "8090:8090"
+    restart: always
+    networks:
+      - internal
+
+  api-gateway:
+    container_name: apigateway
+    build:
+      context: ./apiGateway
+      dockerfile: Dockerfile
+    links:
+      - database
+    depends_on:
+      - database
+      - rabbitmq-container
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/testdb
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=sameer
+      - PRODUCT_HOST=product-service
+      - BASKET_HOST=basket-service
+    ports:
+      - "8091:8091"
+    restart: always
+    networks:
+      - internal
+
+  database:
+    platform: linux/x86_64
+    image: mysql:8.0
+    container_name: mysql
+    hostname: mysql
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_DATABASE: testdb
+      MYSQL_ROOT_USER: root
+      MYSQL_ROOT_PASSWORD: sameer
+    networks:
+      - internal
+    volumes:
+      - db-data:/var/lib/mysql
+
+  rabbitmq-container:
+    image: rabbitmq:3.12-rc-management
+    hostname: rabbitmq-container
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+    networks:
+      - internal
+
+volumes:
+  db-data:
+
+networks:
+  internal:
+    name: internal
